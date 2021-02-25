@@ -9,7 +9,11 @@ output: github_document
 
 ```{r packages}
 library(tidyverse)
+library(tidymodels)
 library(rcfss)
+
+# load correct gss data frame
+data("gss", package = "rcfss")
 ```
 
 ## Session info

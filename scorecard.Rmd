@@ -9,6 +9,7 @@ output: github_document
 
 ```{r}
 library(tidyverse)
+library(tidymodels)
 library(rcfss)
 ```
 
