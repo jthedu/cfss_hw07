@@ -1,6 +1,6 @@
 ---
 title: "Predicting Attitudes Towards Racist College Professors"
-author: "Your name"
+author: "Julia Du"
 date: "`r lubridate::today()`"
 output: github_document
 ---
