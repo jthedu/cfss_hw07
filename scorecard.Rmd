@@ -41,10 +41,9 @@ debt_fit %>%
   pull_workflow_fit() %>%
   tidy()
 
-
 predict(object = debt_fit, new_data = scorecard) %>%
-  mutate(debt = scorecard$debt) %>%
-  rmse(truth = debt, estimate = .pred)
+  mutate(actual_debt = scorecard$debt) %>%
+  rmse(truth = actual_debt, estimate = .pred)
 ```
 
 ## Session info

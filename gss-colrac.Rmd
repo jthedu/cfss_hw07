@@ -16,6 +16,76 @@ library(rcfss)
 data("gss", package = "rcfss")
 ```
 
+```{r setup}
+# setting seed for all of this doc
+set.seed(123)
+
+# splitting data
+gss_split <- initial_split(gss, strata = colrac)
+
+gss_train <- training(gss_split)
+gss_test <- testing(gss_split)
+
+folds <- vfold_cv(gss_train, v = 10)
+```
+
+```{r}
+# build a log model specification
+lr_mod <- logistic_reg() %>% 
+  set_engine("glm")
+
+# resample via a workflow
+colrac_lr_wf <- workflow() %>%
+  add_model(lr_mod) %>%
+  add_formula(colrac ~ 
+                age + black + degree + partyid_3 + sex + south)
+
+lr_fit_rs <- colrac_lr_wf %>%
+  fit_resamples(folds)
+
+collect_metrics(lr_fit_rs)
+```
+Accuracy pretty dang low, man!
+
+```{r random_forest}
+# build a random forest model specification
+rf_mod <- rand_forest(trees = 1000) %>% 
+  set_engine("ranger") %>% 
+  set_mode("classification")
+
+gss_rec <- recipe(colrac ~ ., data = gss_train) %>% 
+  update_role(id, wtss, new_role = "ID") %>%
+  step_naomit(colrac, skip = TRUE) %>%
+  step_medianimpute(all_numeric()) %>%
+  step_modeimpute(all_nominal(), -all_outcomes()) %>%
+  step_cut(cohort, breaks = c(1945, 1964, 1980)) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+#how do i know when to use dummy var (esp for random forest)
+
+gss_rf_wf <- workflow() %>%
+  add_model(rf_mod) %>%
+  add_recipe(gss_rec)
+
+#gss_rf_fit <- gss_rf_wflow %>%
+ # fit(data = gss_train)
+
+#gss_rf_fit %>%
+ # pull_workflow_fit() %>%
+  #tidy()
+
+rf_fit_rs <- gss_rf_wf %>%
+  fit_resamples(folds)
+
+collect_metrics(rf_fit_rs)
+```
+
+
+```{r}
+
+```
+
+
 ## Session info
 
 ```{r}
