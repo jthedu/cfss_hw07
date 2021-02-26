@@ -15,6 +15,7 @@ library(tidymodels)
 library(rcfss)
 library(usemodels)
 library(kknn)
+library(glmnet)
 
 # load correct gss data frame
 data("gss", package = "rcfss")
@@ -33,6 +34,7 @@ gss_test <- testing(gss_split)
 folds <- vfold_cv(gss_train, v = 10)
 ```
 
+
 ```{r log_reg}
 # build a log model specification
 lr_mod <- logistic_reg() %>% 
@@ -47,21 +49,23 @@ colrac_lr_wf <- workflow() %>%
 lr_fit_rs <- colrac_lr_wf %>%
   fit_resamples(folds)
 
-## do we only want accuracy or roc_auc as well?
-collect_metrics(lr_fit_rs, summarize = FALSE) %>%
+collect_metrics(lr_fit_rs) %>%
+  # can use summarize = FALSE to see metrics for all 10 folds
   filter(.metric == "accuracy")
 ```
 Accuracy pretty dang low, man!
 
 ```{r random_forest}
-# general random forest template  
+# random forest template  
 # doesn't actually do anything, but good for reference
-use_ranger(colrac  ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
+#use_ranger(colrac  ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
 
 # build a random forest model specification
 rf_mod <- rand_forest(trees = 1000) %>% 
   set_engine("ranger") %>% 
   set_mode("classification")
+
+## do i need TREES IN MY MODEL?
 
 rf_rec <- recipe(colrac ~ ., data = gss_train) %>% 
   update_role(id, wtss, new_role = "ID") %>%
@@ -70,25 +74,20 @@ rf_rec <- recipe(colrac ~ ., data = gss_train) %>%
   step_modeimpute(all_nominal(), -all_outcomes()) %>%
   step_cut(cohort, breaks = c(1945, 1964, 1980))
 
-#%>% step_dummy(all_nominal(), -all_outcomes())
-
-#how do i know when to use dummy var (esp for random forest)
-
 rf_wf <- workflow() %>%
   add_model(rf_mod) %>%
   add_recipe(rf_rec)
 
-rf_fit_rs <- rf_wf %>%
-  fit_resamples(folds)
-
-collect_metrics(rf_fit_rs, summarize = FALSE) %>%
+rf_wf %>%
+  fit_resamples(folds) %>%
+  collect_metrics() %>% 
   filter(.metric == "accuracy")
 ```
 
 
 ```{r knn}
 # template for kknn
-use_kknn(colrac  ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
+#use_kknn(colrac ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
 
 
 knn_mod <- nearest_neighbor(neighbors = 5) %>%              
@@ -110,14 +109,30 @@ knn_wf <- workflow() %>%
   add_model(knn_mod) %>%
   add_recipe(knn_rec)
 
-# do they want me to NOT use folds here?
 knn_wf %>%
   fit_resamples(folds) %>%
-  collect_metrics(summarize = FALSE) %>%
+  collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
 
+
 ```{r ridge}
+ridge_mod <- logistic_reg(penalty = .01, mixture = 0) %>% 
+  set_engine("glmnet") %>% 
+  set_mode("classification")
+
+# using same recipe as knn
+update_model(knn_wf, ridge_mod) %>%
+  fit_resamples(folds) %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy")
+
+workflow() %>%
+  add_model(ridge_mod) %>%
+  add_recipe(knn_rec) %>%
+  fit_resamples(folds) %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy")
 ```
 
 ## Session info
