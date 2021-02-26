@@ -34,7 +34,7 @@ gss_test <- testing(gss_split)
 folds <- vfold_cv(gss_train, v = 10)
 ```
 
-
+CHECK THAT I DON'T NEED TO PRE-PROCESS this logistic model
 ```{r log_reg}
 # build a log model specification
 lr_mod <- logistic_reg() %>% 
@@ -118,7 +118,7 @@ knn_wf %>%
 
 ```{r ridge}
 ridge_mod <- logistic_reg(penalty = .01, mixture = 0) %>% 
-  set_engine("glmnet") %>% 
+  set_engine("glmnet") %>% # use glmnet over glm since we have a penalty
   set_mode("classification")
 
 # using same recipe as knn
