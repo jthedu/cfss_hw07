@@ -126,13 +126,6 @@ update_model(knn_wf, ridge_mod) %>%
   fit_resamples(folds) %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
-
-workflow() %>%
-  add_model(ridge_mod) %>%
-  add_recipe(knn_rec) %>%
-  fit_resamples(folds) %>%
-  collect_metrics() %>%
-  filter(.metric == "accuracy")
 ```
 
 ## Session info
