@@ -2,7 +2,9 @@
 title: "Predicting Attitudes Towards Racist College Professors"
 author: "Julia Du"
 date: "`r lubridate::today()`"
-output: github_document
+output: 
+  github_document:
+    toc: true
 ---
 
 ## Load necessary libraries
@@ -11,6 +13,8 @@ output: github_document
 library(tidyverse)
 library(tidymodels)
 library(rcfss)
+library(usemodels)
+library(kknn)
 
 # load correct gss data frame
 data("gss", package = "rcfss")
@@ -29,7 +33,7 @@ gss_test <- testing(gss_split)
 folds <- vfold_cv(gss_train, v = 10)
 ```
 
-```{r}
+```{r log_reg}
 # build a log model specification
 lr_mod <- logistic_reg() %>% 
   set_engine("glm")
@@ -43,48 +47,78 @@ colrac_lr_wf <- workflow() %>%
 lr_fit_rs <- colrac_lr_wf %>%
   fit_resamples(folds)
 
-collect_metrics(lr_fit_rs)
+## do we only want accuracy or roc_auc as well?
+collect_metrics(lr_fit_rs, summarize = FALSE) %>%
+  filter(.metric == "accuracy")
 ```
 Accuracy pretty dang low, man!
 
 ```{r random_forest}
+# general random forest template  
+# doesn't actually do anything, but good for reference
+use_ranger(colrac  ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
+
 # build a random forest model specification
 rf_mod <- rand_forest(trees = 1000) %>% 
   set_engine("ranger") %>% 
   set_mode("classification")
 
-gss_rec <- recipe(colrac ~ ., data = gss_train) %>% 
+rf_rec <- recipe(colrac ~ ., data = gss_train) %>% 
+  update_role(id, wtss, new_role = "ID") %>%
+  step_naomit(colrac, skip = TRUE) %>%
+  step_medianimpute(all_numeric()) %>%
+  step_modeimpute(all_nominal(), -all_outcomes()) %>%
+  step_cut(cohort, breaks = c(1945, 1964, 1980))
+
+#%>% step_dummy(all_nominal(), -all_outcomes())
+
+#how do i know when to use dummy var (esp for random forest)
+
+rf_wf <- workflow() %>%
+  add_model(rf_mod) %>%
+  add_recipe(rf_rec)
+
+rf_fit_rs <- rf_wf %>%
+  fit_resamples(folds)
+
+collect_metrics(rf_fit_rs, summarize = FALSE) %>%
+  filter(.metric == "accuracy")
+```
+
+
+```{r knn}
+# template for kknn
+use_kknn(colrac  ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
+
+
+knn_mod <- nearest_neighbor(neighbors = 5) %>%              
+  set_engine("kknn") %>%             
+  set_mode("classification")      
+
+knn_rec <- recipe(formula = colrac ~ ., data = gss_train) %>% 
   update_role(id, wtss, new_role = "ID") %>%
   step_naomit(colrac, skip = TRUE) %>%
   step_medianimpute(all_numeric()) %>%
   step_modeimpute(all_nominal(), -all_outcomes()) %>%
   step_cut(cohort, breaks = c(1945, 1964, 1980)) %>%
-  step_dummy(all_nominal(), -all_outcomes())
+  step_novel(all_nominal(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_zv(all_predictors()) %>% 
+  step_normalize(all_predictors(), -all_nominal()) 
 
-#how do i know when to use dummy var (esp for random forest)
+knn_wf <- workflow() %>%
+  add_model(knn_mod) %>%
+  add_recipe(knn_rec)
 
-gss_rf_wf <- workflow() %>%
-  add_model(rf_mod) %>%
-  add_recipe(gss_rec)
-
-#gss_rf_fit <- gss_rf_wflow %>%
- # fit(data = gss_train)
-
-#gss_rf_fit %>%
- # pull_workflow_fit() %>%
-  #tidy()
-
-rf_fit_rs <- gss_rf_wf %>%
-  fit_resamples(folds)
-
-collect_metrics(rf_fit_rs)
+# do they want me to NOT use folds here?
+knn_wf %>%
+  fit_resamples(folds) %>%
+  collect_metrics(summarize = FALSE) %>%
+  filter(.metric == "accuracy")
 ```
 
-
-```{r}
-
+```{r ridge}
 ```
-
 
 ## Session info
 
