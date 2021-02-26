@@ -22,11 +22,10 @@ lm_fit
 
 ```{r basic_linear}
 debt_rec <- recipe(debt ~ ., data = scorecard) %>% 
-  update_role(unitid, name, new_role = "ID") %>%
-  step_rm(state, openadmp) %>% # check
-  step_medianimpute(all_numeric()) %>%
-  step_modeimpute(all_nominal(), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes())
+  step_rm(state, openadmp, unitid, name) 
+
+# could just drop(state, openadmp, unitid, name)
+# don't need dummy var & imputed means/medians for lin reg
 
 lm_mod <- linear_reg() %>% 
   set_engine("lm")
@@ -35,7 +34,6 @@ debt_wflow <- workflow() %>%
   add_model(lm_mod) %>%
   add_recipe(debt_rec)
 
-## should i be using training data? probs not right? am i making this too complicated
 debt_fit <- debt_wflow %>%
   fit(data = scorecard)
 
@@ -43,7 +41,10 @@ debt_fit %>%
   pull_workflow_fit() %>%
   tidy()
 
-# predict(object = debt_fit, new_data = ???)
+
+predict(object = debt_fit, new_data = scorecard) %>%
+  mutate(debt = scorecard$debt) %>%
+  rmse(truth = debt, estimate = .pred)
 ```
 
 ## Session info
