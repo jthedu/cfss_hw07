@@ -2,7 +2,9 @@
 title: "Predicting student debt load"
 author: "Julia Du"
 date: "`r lubridate::today()`"
-output: github_document
+output: 
+  github_document:
+    toc: true
 ---
 
 ## Load necessary libraries
@@ -12,6 +14,8 @@ library(tidyverse)
 library(tidymodels)
 library(rcfss)
 library(yardstick)
+
+set.seed(123)
 ```
 
 
@@ -19,16 +23,18 @@ lm_fit <- lm_mod %>%
   fit(debt ~ cost * type, data = scorecard)
 lm_fit
 
+ASK WHY fit_resample
 
-```{r basic_linear}
+```{r basic_line}
+lm_mod <- linear_reg() %>% 
+  set_engine("lm")
+
 debt_rec <- recipe(debt ~ ., data = scorecard) %>% 
-  step_rm(state, openadmp, unitid, name) 
+  update_role(unitid, name, new_role = "ID") %>%
+  step_rm(state, openadmp)
 
 # could just drop(state, openadmp, unitid, name)
 # don't need dummy var & imputed means/medians for lin reg
-
-lm_mod <- linear_reg() %>% 
-  set_engine("lm")
 
 debt_wflow <- workflow() %>%
   add_model(lm_mod) %>%
@@ -37,14 +43,71 @@ debt_wflow <- workflow() %>%
 debt_fit <- debt_wflow %>%
   fit(data = scorecard)
 
-debt_fit %>%
-  pull_workflow_fit() %>%
-  tidy()
+#debt_fit %>%
+ # pull_workflow_fit() %>%
+  #tidy()
 
 predict(object = debt_fit, new_data = scorecard) %>%
   mutate(actual_debt = scorecard$debt) %>%
   rmse(truth = actual_debt, estimate = .pred)
 ```
+
+
+```{r line_CV}
+folds_score <- vfold_cv(scorecard, v = 10)
+
+lm_fit_rs <- debt_wflow %>%
+  fit_resamples(folds_score)
+
+lm_fit_rs[[3]][[5]] %>%
+  filter(.metric == "rmse")
+
+# trying to extract out the RMSE
+#wrote a function at first
+extract_rmse <- function(table, i) {
+  table[[3]][[i]] %>%
+    filter(.metric == "rmse") 
+}
+
+extract_rmse(lm_fit_rs, 5) #function works
+
+# for loop
+for(i in seq_len(nrow(lm_fit_rs))) {
+ trydf <- lm_fit_rs[[3]][[i]] %>%
+    filter(.metric == "rmse") 
+}
+
+trydf #only returns a single row - want a table w/ 10 rows, one for each fold
+
+# attempt at map
+try_rows <- c(1:10) # so I have values for i in extract_rmse
+map(extract_rmse(table = lm_fit_rs, i = try_rows))
+
+
+
+lm_fit_rs %>%
+map(extract_rmse)
+  
+  pmap(extract_rmse(i = 1:10))
+
+    select(.metric, .estimate)
+    
+extract_rmse(lm_fit_rs, 10)
+    
+# so first [[]] tells me which column to choose, 2nd [[]] tells which row
+
+
+ ## USING PREDICT COMMAND?
+#predict(object = lm_fit_rs, new_data = scorecard) %>%
+ # mutate(actual_debt = scorecard$debt) %>%
+  #rmse(truth = actual_debt, estimate = .pred)
+```
+
+
+```{r decision tree}
+
+```
+
 
 ## Session info
 
