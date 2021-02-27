@@ -38,9 +38,6 @@ debt_rec <- recipe(debt ~ ., data = scorecard) %>%
   update_role(unitid, name, new_role = "ID") %>%
   step_rm(state, openadmp)
 
-# could just drop(state, openadmp, unitid, name)
-# don't need dummy var & imputed means/medians for lin reg
-
 debt_wflow <- workflow() %>%
   add_model(lm_mod) %>%
   add_recipe(debt_rec)
@@ -56,7 +53,7 @@ predict(object = debt_fit, new_data = scorecard) %>%
   mutate(actual_debt = scorecard$debt) %>%
   rmse(truth = actual_debt, estimate = .pred)
 ```
-
+Note: for this basic linear model, I could've just altered the dataframe directly to drop my desired variables and used a workflow of model + formula, rather than model + recipe. I chose to do the latter because the recipe approach seemed more intuitive and neater to me. 
 
 ```{r line_CV}
 # adding folds in - ISSUE STARTS HERE 

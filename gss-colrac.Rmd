@@ -94,7 +94,6 @@ rf_wf %>%
 # template for kknn
 #use_kknn(colrac ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
 
-
 knn_mod <- nearest_neighbor(neighbors = 5) %>%              
   set_engine("kknn") %>%             
   set_mode("classification")      
@@ -165,10 +164,11 @@ boost_res %>%
   filter(.metric == "accuracy")
 ```
 
-```{r }
+```{r boost_best}
 # then choose the best model to finish tuning
 best_boost <- boost_res %>%
   select_best("accuracy")
+# can make this a nice kable
 
 final_boost_wf <- boost_wf %>%
   finalize_workflow(best_boost)
