@@ -7,6 +7,10 @@ output:
     toc: true
 ---
 
+```{r setup, echo = FALSE}
+#knitr::opts_chunk$set(message = FALSE)
+```
+
 ## Load necessary libraries
 
 ```{r packages}
@@ -16,12 +20,13 @@ library(rcfss)
 library(usemodels)
 library(kknn)
 library(glmnet)
+library(xgboost)
 
 # load correct gss data frame
 data("gss", package = "rcfss")
 ```
 
-```{r setup}
+```{r initial}
 # setting seed for all of this doc
 set.seed(123)
 
@@ -126,6 +131,72 @@ update_model(knn_wf, ridge_mod) %>%
   fit_resamples(folds) %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
+```
+```{r tune_boost_tree, cache = TRUE}
+boost_tune_spec <- 
+  boost_tree(
+    min_n = tune(),
+    tree_depth = tune(), 
+    learn_rate = tune()
+  ) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("classification")
+
+boost_grid <- grid_regular(min_n(),
+                          tree_depth(),
+                          learn_rate(),
+                          levels = 3)
+
+#tree_grid %>% 
+ # count(tree_depth)
+
+boost_wf <- workflow() %>%
+  add_model(boost_tune_spec) %>%
+  add_recipe(knn_rec)
+
+boost_res <- boost_wf %>% 
+  tune_grid(
+    resamples = folds,
+    grid = boost_grid
+    )
+
+boost_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy")
+```
+
+```{r }
+# then choose the best model to finish tuning
+best_boost <- boost_res %>%
+  select_best("accuracy")
+
+final_boost_wf <- boost_wf %>%
+  finalize_workflow(best_boost)
+
+# fit best model to training data
+final_boost <- final_boost_wf %>%
+  fit(data = gss_train)
+
+final_boost_wf
+# best values for
+  #min_n = 2
+  #tree_depth = 8
+  #learn_rate = 3.16227766016838e-06
+
+
+# can see how important each var is here
+library(vip)
+
+final_boost %>% 
+  pull_workflow_fit() %>% 
+  vip()
+
+# last fit & eval of model performance
+final_boost_wf %>%
+  last_fit(gss_split) %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy")
+
 ```
 
 ## Session info

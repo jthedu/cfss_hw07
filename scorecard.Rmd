@@ -7,6 +7,10 @@ output:
     toc: true
 ---
 
+```{r setup, echo = FALSE}
+#knitr::opts_chunk$set(message = FALSE)
+```
+
 ## Load necessary libraries
 
 ```{r, echo = FALSE}
@@ -72,7 +76,7 @@ lm_fit_rs %>%
 ```
 
 
-```{r decision_tree}
+```{r decision_tree, cache = TRUE}
 #tree_mod <- decision_tree() %>% 
  # set_engine("rpart") %>%
   #set_mode("regression")
@@ -119,7 +123,9 @@ tree_res <-
 tree_res %>%
   collect_metrics() %>%
   filter(.metric == "rmse")
+```
 
+```{r tree_best}
 # then choose the best model to finish tuning
 best_tree <- tree_res %>%
   select_best("rmse")
@@ -130,6 +136,11 @@ final_tree_wf <- tree_wf %>%
 # fit best model to training data
 final_tree <- final_tree_wf %>%
   fit(data = score_train)
+
+final_tree_wf
+# best values for
+#  cost_complexity = 1e-10
+ # tree_depth = 4
 
 # can see how important each var is here
 library(vip)
