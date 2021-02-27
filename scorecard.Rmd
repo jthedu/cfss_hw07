@@ -55,71 +55,17 @@ predict(object = debt_fit, new_data = scorecard) %>%
 
 
 ```{r line_CV}
-library(tidyverse)
-library(tidymodels)
-library(rcfss)
-
-#setup of lin model (no problem here)
-lm_mod <- linear_reg() %>% 
-  set_engine("lm")
-
-debt_rec <- recipe(debt ~ ., data = scorecard) %>% 
-  update_role(unitid, name, new_role = "ID") %>%
-  step_rm(state, openadmp)
-
-debt_wflow <- workflow() %>%
-  add_model(lm_mod) %>%
-  add_recipe(debt_rec)
-
 # adding folds in - ISSUE STARTS HERE 
-#(delete above for final product - was just included for reprex)
 folds_score <- vfold_cv(scorecard, v = 10)
 
 lm_fit_rs <- debt_wflow %>% 
   fit_resamples(folds_score)
 
-# trying to extract out the RMSE
-#wrote a function at first
-extract_rmse <- function(table, i) {
-  table[[3]][[i]] %>%
-    filter(.metric == "rmse") 
-}
-
-extract_rmse(lm_fit_rs, 5) #function works
-
-# for loop
-for(i in seq_len(nrow(lm_fit_rs))) {
- trydf <- lm_fit_rs[[3]][[i]] %>%
-    filter(.metric == "rmse") 
-}
-
-trydf #only returns a single row - want a table w/ 10 rows, one for each fold
-
-# attempt at map. 
-# tried using pmap (since extract_rmse function has 2 inputs), but didn't get far
-try_rows <- c(1:10) # so I have values for i in extract_rmse
-map(extract_rmse(table = lm_fit_rs, i = try_rows))
-
-
-
-# END REPREX CODE
-
 lm_fit_rs %>%
-map(extract_rmse)
-  
-  pmap(extract_rmse(i = 1:10))
-  
-    select(.metric, .estimate)
-    
-extract_rmse(lm_fit_rs, 10)
-
-lm_fit_rs[[3]][[5]] %>%
+  collect_metrics(summary = TRUE) %>%
   filter(.metric == "rmse")
 
-# so first [[]] tells me which column to choose, 2nd [[]] tells which row
-
-
- ## USING PREDICT COMMAND?
+ ## check understanding: don't need predict command cuz using 10 fold to resample automatically does that?
 #predict(object = lm_fit_rs, new_data = scorecard) %>%
  # mutate(actual_debt = scorecard$debt) %>%
   #rmse(truth = actual_debt, estimate = .pred)
