@@ -21,4 +21,11 @@ library(lubridate)
 library(tidymodels)
 library(rcfss)
 
+library(usemodels)
+library(kknn)
+library(glmnet)
+library(xgboost)
+library(vip)
+
 ```
+2nd chunk of packages are more specialized - most of these are needed for running the specific models we use.
