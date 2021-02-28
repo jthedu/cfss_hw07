@@ -7,10 +7,6 @@ output:
     toc: true
 ---
 
-```{r setup, echo = FALSE}
-#knitr::opts_chunk$set(message = FALSE)
-```
-
 ## Load necessary libraries
 
 ```{r packages}
@@ -24,9 +20,11 @@ library(xgboost)
 
 # load correct gss data frame
 data("gss", package = "rcfss")
+
+theme_set(theme_minimal())
 ```
 
-```{r initial}
+```{r oof}
 # setting seed for all of this doc
 set.seed(123)
 

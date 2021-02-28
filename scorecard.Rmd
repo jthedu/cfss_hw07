@@ -7,9 +7,10 @@ output:
     toc: true
 ---
 
-```{r setup, echo = FALSE}
+#do this later
+{r setup, echo = FALSE}
 #knitr::opts_chunk$set(message = FALSE)
-```
+
 
 ## Load necessary libraries
 
@@ -18,17 +19,16 @@ library(tidyverse)
 library(tidymodels)
 library(rcfss)
 library(yardstick)
+library(skimr)
 
 set.seed(123)
 ```
 
-
-lm_fit <- lm_mod %>% 
-  fit(debt ~ cost * type, data = scorecard)
-lm_fit
-
 ASK WHY fit_resample
 also what are "appropriate visualization techniques" for these models
+auc, accuracy over tuning, confusion matrix
+check distributions of vars w/ ggplot syntax
+skimr - package (skimr(df))
 
 ```{r basic_line}
 lm_mod <- linear_reg() %>% 
@@ -67,6 +67,7 @@ lm_fit_rs %>%
   filter(.metric == "rmse")
 
  ## check understanding: don't need predict command cuz using 10 fold to resample automatically does that?
+# for every fold in df, get predictions
 #predict(object = lm_fit_rs, new_data = scorecard) %>%
  # mutate(actual_debt = scorecard$debt) %>%
   #rmse(truth = actual_debt, estimate = .pred)
@@ -120,12 +121,38 @@ tree_res <-
 tree_res %>%
   collect_metrics() %>%
   filter(.metric == "rmse")
+
+#check this works
+tree_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(cost_complexity, mean, color = tree_depth)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
+  scale_x_log10(labels = scales::label_number()) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "Accuracy across different hyperparameter values",
+       x = "log10(Cost complexity)",
+       y = "Mean accuracy",
+       color = "Tree depth")
 ```
+
+
 
 ```{r tree_best}
 # then choose the best model to finish tuning
 best_tree <- tree_res %>%
   select_best("rmse")
+
+best_tree %>%
+  select(-.config) %>%
+  knitr::kable(
+    caption = "Hyperparameter values maximizing accuracy in decision tree model", 
+    col.names = c(
+      "Complexity parameter",
+      "Tree depth"))
 
 final_tree_wf <- tree_wf %>%
   finalize_workflow(best_tree)
