@@ -145,16 +145,16 @@ ridge_rs %>%
 boost_tune_spec <- 
   boost_tree(
   #  min_n = tune(),
-    tree_depth = tune(), 
+  #  tree_depth = tune(), 
     learn_rate = tune()
   ) %>% 
   set_engine("xgboost") %>% 
   set_mode("classification")
 
 boost_grid <- grid_regular(#min_n(),
-                          tree_depth(),
+   #                       tree_depth(),
                           learn_rate(),
-                          levels = 3)
+                          levels = 2)
 # originally included min_n() in hyperparameters,
 # but was unable to knit on MACSS R server 
 
@@ -175,8 +175,8 @@ boost_res %>%
 boost_res %>%
   collect_metrics() %>%
   filter(.metric == "accuracy") %>%
-  mutate(tree_depth = factor(tree_depth)) %>%
-  ggplot(aes(learn_rate, mean, color = tree_depth)) +
+#  mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(learn_rate, mean)) + #, color = tree_depth
   geom_line(size = 1.5, alpha = 0.6) +
   geom_point(size = 2) +
  # facet_wrap(~ min_n, labeller = label_both) +
@@ -185,11 +185,14 @@ boost_res %>%
   theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "Accuracy across different hyperparameter values",
        x = "log10(Learn rate)",
-       y = "Mean accuracy",
-       color = "Tree depth")
+       y = "Mean accuracy" #,
+       #color = "Tree depth"
+       )
 ```
 
-From the graph, we can see that highest accuracy comes from a min_n value of 2. Looking closer, we see that a tree depth of 8 & log10(learn rate) of around .00001 gave the best accuracy of all tested boosted tree models.
+Note: for my tuned boosted tree model, I'd originally included min_n as one of the hyperparameters, but I was forced to leave it out because the MACSS R server was unable to knit with so many hyperparameters. While I managed to run the code & get my specified output with 3 hyperparametrs, knitting didn't work. I've left my original code of 3 hyperparameters as comments, in case you're curious and want to try it out on your own computer.
+
+From the graph, we can see that a tree depth of 8 & log10(learn rate) of around .01 gave the best accuracy of all tested boosted tree models.
 
 
 ```{r boost_best}
@@ -203,7 +206,7 @@ best_boost %>%
     caption = "Hyperparameter values maximizing accuracy in boosted tree model", 
     col.names = c(
   #    "Minimum n to split at node",
-      "Tree depth", 
+    #  "Tree depth", 
       "Learning rate"))
 
 final_boost_wf <- boost_wf %>%
@@ -264,15 +267,14 @@ compare_accuracy %>%
     col.names = c(
       "Model type",
       "Percentage of data predicted correctly"), 
-    digits = 2)
+    digits = 3)
 ```
 
-Random forest gave the most accurate model, predicted about 79% of data correctly. The logistic regression was the worst (53% accuracy), probably because it, unlike all other models built here, didn't use all variables in the dataset as predictor variables. The logistic regression only used the age, black, degree, partyid_3, sex, and south variables as predictors - so less of the variation in the outcome variable would've been explained.
+After reducing down to only 2 hyperparameters, the tuned boosted tree model did the best overall, with a mean accuracy of 80%. 
 
-Of the models that did include all available variables as predictors, the 5-nearest neighbors did the worst, with an accuracy of 61%.
+Random forest also gave a quite accurate model, predicting about 79% of data correctly. The logistic regression did the worst (53% accuracy), probably because it, unlike all other models built here, didn't use all variables in the dataset as predictor variables. The logistic regression only used the age, black, degree, partyid_3, sex, and south variables as predictors - so less of the variation in the outcome variable would've been explained.
 
-Interestingly, tuning didn't help the boosted tree model do better than random forest (tuned boosted tree had a mean accuracy of 76%) or even better than the ridge model (accuracy of 78%), indicating that there's a limit to how far tuning can get you if your model overall doesn't work that well or isn't best suited for the question at hand.
-
+All these accuracy figures seem quite reasonable - they aren't overly optimistic, which could imply overfitting the data. Instead, they mostly hover around the upper 70% range, with the basic logistic model doing poorly due to only using a few predictor variables & the 5-nearest neighbors underperforming (with an accuracy of 61%) in comparison to the other models that used all available variables as predictors.
 
 ## Session info
 
