@@ -20,6 +20,8 @@ library(tidymodels)
 library(rcfss)
 library(yardstick)
 library(skimr)
+library(vip)
+library(lubridate)
 
 set.seed(123)
 
@@ -31,6 +33,7 @@ also what are "appropriate visualization techniques" for these models
 auc, accuracy over tuning, confusion matrix
 check distributions of vars w/ ggplot syntax
 skimr - package (skimr(df))
+
 
 ```{r basic_line}
 lm_mod <- linear_reg() %>% 
@@ -129,13 +132,13 @@ tree_res %>%
   facet_wrap(~ .metric, scales = "free") +
   scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
   scale_x_log10(labels = scales::label_number()) +
-  theme(axis.text.x = element_text(angle = 90)) +
+ # theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "RMSE & R^2 across different hyperparameter values",
        x = "log10(Cost complexity)",
-       y = "Mean RMSE",
+       y = "Mean values of models",
        color = "Tree depth")
 ```
-
+looks like model w/ tree depth of 4 & log10(cost complexity) very close to 0 is best -- has the smallest RMSE (i.e. smallest diffs between observed values & predicted values of debt by the model) & highest R^2 (i.e. more of the variance in debt is explained by the model). in short, fit is best for those parameters
 
 
 ```{r tree_best}
@@ -149,7 +152,7 @@ best_tree %>%
     caption = "Hyperparameter values maximizing accuracy in decision tree model", 
     col.names = c(
       "Complexity parameter",
-      "Tree depth"))
+      "Tree depth"), digits = 10)
 
 final_tree_wf <- tree_wf %>%
   finalize_workflow(best_tree)
@@ -158,17 +161,11 @@ final_tree_wf <- tree_wf %>%
 final_tree <- final_tree_wf %>%
   fit(data = score_train)
 
-final_tree_wf
-# best values for
-#  cost_complexity = 1e-10
- # tree_depth = 4
-
 # can see how important each var is here
-library(vip)
-
 final_tree %>% 
   pull_workflow_fit() %>% 
-  vip()
+  vip() +
+  labs(title = "Important variables\nin final decision tree model") 
 
 # last fit & eval of model performance
 final_tree_wf %>%
@@ -177,6 +174,10 @@ final_tree_wf %>%
   filter(.metric == "rmse")
 ```
 
+
+so, overall, saw smallest RMSE for basic linear model. w/ cross-validation, saw slightly bigger RMSE & w/ tuned decision tree, saw even bigger. 
+
+makes sense -- w/o resampling & tuning, models can be unrealistically optimistic & seem to explain data very well
 
 ## Session info
 
