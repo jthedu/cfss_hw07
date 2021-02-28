@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, echo = FALSE}
-knitr::opts_chunk$set(message = FALSE, cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
 ```
 
 ## Load necessary libraries
@@ -29,6 +29,7 @@ data("gss", package = "rcfss")
 
 theme_set(theme_minimal())
 ```
+
 
 ```{r oof}
 # setting seed for all of this doc
@@ -145,16 +146,16 @@ ridge_rs %>%
 boost_tune_spec <- 
   boost_tree(
   #  min_n = tune(),
-  #  tree_depth = tune(), 
+    tree_depth = tune(), 
     learn_rate = tune()
   ) %>% 
   set_engine("xgboost") %>% 
   set_mode("classification")
 
 boost_grid <- grid_regular(#min_n(),
-   #                       tree_depth(),
+                          tree_depth(),
                           learn_rate(),
-                          levels = 2)
+                          levels = 3)
 # originally included min_n() in hyperparameters,
 # but was unable to knit on MACSS R server 
 
@@ -175,8 +176,8 @@ boost_res %>%
 boost_res %>%
   collect_metrics() %>%
   filter(.metric == "accuracy") %>%
-#  mutate(tree_depth = factor(tree_depth)) %>%
-  ggplot(aes(learn_rate, mean)) + #, color = tree_depth
+  mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(learn_rate, mean, color = tree_depth)) +
   geom_line(size = 1.5, alpha = 0.6) +
   geom_point(size = 2) +
  # facet_wrap(~ min_n, labeller = label_both) +
@@ -185,8 +186,8 @@ boost_res %>%
   theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "Accuracy across different hyperparameter values",
        x = "log10(Learn rate)",
-       y = "Mean accuracy" #,
-       #color = "Tree depth"
+       y = "Mean accuracy" ,
+       color = "Tree depth"
        )
 ```
 
@@ -195,7 +196,7 @@ Note: for my tuned boosted tree model, I'd originally included min_n as one of t
 From the graph, we can see that a tree depth of 8 & log10(learn rate) of around .01 gave the best accuracy of all tested boosted tree models.
 
 
-```{r boost_best}
+```{r boost_best, warning = FALSE}
 # then choose the best model to finish tuning
 best_boost <- boost_res %>%
   select_best("accuracy")
@@ -206,7 +207,7 @@ best_boost %>%
     caption = "Hyperparameter values maximizing accuracy in boosted tree model", 
     col.names = c(
   #    "Minimum n to split at node",
-    #  "Tree depth", 
+      "Tree depth", 
       "Learning rate"))
 
 final_boost_wf <- boost_wf %>%
