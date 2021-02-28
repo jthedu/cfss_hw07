@@ -15,7 +15,6 @@ You should have the following packages installed:
 ```r
 library(reprex)
 library(tidyverse)
-library(glue)
 library(knitr)
 library(lubridate)
 library(tidymodels)

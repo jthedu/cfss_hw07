@@ -12,6 +12,18 @@ Julia Du
 
 ## Load necessary libraries
 
+``` r
+library(tidyverse)
+library(tidymodels)
+library(rcfss)
+library(vip)
+library(lubridate)
+
+set.seed(123)
+
+theme_set(theme_minimal())
+```
+
 ## Basic linear model
 
 ``` r
