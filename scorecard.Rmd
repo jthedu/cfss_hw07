@@ -22,6 +22,8 @@ library(yardstick)
 library(skimr)
 
 set.seed(123)
+
+theme_set(theme_minimal())
 ```
 
 ASK WHY fit_resample
@@ -65,12 +67,6 @@ lm_fit_rs <- debt_wflow %>%
 lm_fit_rs %>%
   collect_metrics() %>%
   filter(.metric == "rmse")
-
- ## check understanding: don't need predict command cuz using 10 fold to resample automatically does that?
-# for every fold in df, get predictions
-#predict(object = lm_fit_rs, new_data = scorecard) %>%
- # mutate(actual_debt = scorecard$debt) %>%
-  #rmse(truth = actual_debt, estimate = .pred)
 ```
 
 
@@ -125,17 +121,18 @@ tree_res %>%
 #check this works
 tree_res %>%
   collect_metrics() %>%
-  filter(.metric == "accuracy") %>%
+ # filter(.metric == "rmse") %>%
   mutate(tree_depth = factor(tree_depth)) %>%
   ggplot(aes(cost_complexity, mean, color = tree_depth)) +
   geom_line(size = 1.5, alpha = 0.6) +
   geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free") +
   scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
   scale_x_log10(labels = scales::label_number()) +
   theme(axis.text.x = element_text(angle = 90)) +
-  labs(title = "Accuracy across different hyperparameter values",
+  labs(title = "RMSE & R^2 across different hyperparameter values",
        x = "log10(Cost complexity)",
-       y = "Mean accuracy",
+       y = "Mean RMSE",
        color = "Tree depth")
 ```
 
