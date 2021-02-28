@@ -204,7 +204,7 @@ well.
 Overall, we saw the smallest RMSE for the basic linear model (2992.32).
 When we add in cross-validation to the linear model, we see a slightly
 bigger RMSE (3029.57). With the tuned decision tree, we see an even
-bigger RMSE (3512.67). This seems to make sense. Without resampling or
+bigger RMSE (3488.75). This seems to make sense. Without resampling or
 tuning, a model can be unrealistically optimistic and seem to explain
 data very well - when really the model was overfitting the data we have.
 
@@ -236,7 +236,6 @@ devtools::session_info()
     ##  package     * version    date       lib source                        
     ##  assertthat    0.2.1      2019-03-21 [2] CRAN (R 4.0.1)                
     ##  backports     1.2.1      2020-12-09 [2] CRAN (R 4.0.1)                
-    ##  base64enc     0.1-3      2015-07-28 [2] CRAN (R 4.0.1)                
     ##  broom       * 0.7.3      2020-12-16 [2] CRAN (R 4.0.1)                
     ##  callr         3.5.1      2020-10-13 [2] CRAN (R 4.0.1)                
     ##  cellranger    1.1.0      2016-07-27 [2] CRAN (R 4.0.1)                
@@ -316,7 +315,6 @@ devtools::session_info()
     ##  readxl        1.3.1      2019-03-13 [2] CRAN (R 4.0.1)                
     ##  recipes     * 0.1.15     2020-11-11 [2] CRAN (R 4.0.1)                
     ##  remotes       2.2.0      2020-07-21 [2] CRAN (R 4.0.1)                
-    ##  repr          1.1.3      2021-01-21 [1] CRAN (R 4.0.1)                
     ##  reprex        0.3.0      2019-05-16 [1] CRAN (R 4.0.1)                
     ##  rlang       * 0.4.10     2020-12-30 [2] CRAN (R 4.0.1)                
     ##  rmarkdown     2.7        2021-02-19 [1] CRAN (R 4.0.1)                
@@ -327,7 +325,6 @@ devtools::session_info()
     ##  rvest         0.3.6      2020-07-25 [2] CRAN (R 4.0.1)                
     ##  scales      * 1.1.1      2020-05-11 [2] CRAN (R 4.0.1)                
     ##  sessioninfo   1.1.1      2018-11-05 [2] CRAN (R 4.0.1)                
-    ##  skimr       * 2.1.2      2020-07-06 [1] CRAN (R 4.0.1)                
     ##  stringi       1.5.3      2020-09-09 [2] CRAN (R 4.0.1)                
     ##  stringr     * 1.4.0      2019-02-10 [2] CRAN (R 4.0.1)                
     ##  survival      3.1-12     2020-04-10 [2] CRAN (R 4.0.1)                
@@ -343,7 +340,6 @@ devtools::session_info()
     ##  utf8          1.1.4      2018-05-24 [2] CRAN (R 4.0.1)                
     ##  vctrs       * 0.3.6      2020-12-17 [2] CRAN (R 4.0.1)                
     ##  vip         * 0.3.2      2020-12-17 [1] CRAN (R 4.0.1)                
-    ##  viridisLite   0.3.0      2018-02-01 [2] CRAN (R 4.0.1)                
     ##  withr         2.3.0      2020-09-22 [2] CRAN (R 4.0.1)                
     ##  workflows   * 0.2.1      2020-10-08 [2] CRAN (R 4.0.1)                
     ##  xfun          0.19       2020-10-30 [2] CRAN (R 4.0.1)                

@@ -154,7 +154,7 @@ The importance graph shows which variables are most important in driving predict
 
 ## Conclusion
 
-Overall, we saw the smallest RMSE for the basic linear model (2992.32). When we add in cross-validation to the linear model, we see a slightly bigger RMSE (3029.57). With the tuned decision tree, we see an even bigger RMSE (3512.67). This seems to make sense. Without resampling or tuning, a model can be unrealistically optimistic and seem to explain data very well - when really the model was overfitting the data we have. 
+Overall, we saw the smallest RMSE for the basic linear model (2992.32). When we add in cross-validation to the linear model, we see a slightly bigger RMSE (3029.57). With the tuned decision tree, we see an even bigger RMSE (3488.75). This seems to make sense. Without resampling or tuning, a model can be unrealistically optimistic and seem to explain data very well - when really the model was overfitting the data we have. 
 
 It is interesting that the tuned decision tree did worse than the cross-validated linear model, so this may be an instance where a decision tree model just doesn't work as well as a linear model. Overall, I'd say that the cross-validated linear model did the best overall, given its comparatively low RMSE.
 
