@@ -144,17 +144,19 @@ ridge_rs %>%
 ```{r tune_boost_tree, cache = TRUE}
 boost_tune_spec <- 
   boost_tree(
-    min_n = tune(),
+  #  min_n = tune(),
     tree_depth = tune(), 
     learn_rate = tune()
   ) %>% 
   set_engine("xgboost") %>% 
   set_mode("classification")
 
-boost_grid <- grid_regular(min_n(),
+boost_grid <- grid_regular(#min_n(),
                           tree_depth(),
                           learn_rate(),
                           levels = 3)
+# originally included min_n() in hyperparameters,
+# but was unable to knit on MACSS R server 
 
 boost_wf <- workflow() %>%
   add_model(boost_tune_spec) %>%
@@ -177,7 +179,7 @@ boost_res %>%
   ggplot(aes(learn_rate, mean, color = tree_depth)) +
   geom_line(size = 1.5, alpha = 0.6) +
   geom_point(size = 2) +
-  facet_wrap(~ min_n, labeller = label_both) +
+ # facet_wrap(~ min_n, labeller = label_both) +
   scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
   scale_x_log10(labels = scales::label_number()) +
   theme(axis.text.x = element_text(angle = 90)) +
@@ -200,7 +202,7 @@ best_boost %>%
   knitr::kable(
     caption = "Hyperparameter values maximizing accuracy in boosted tree model", 
     col.names = c(
-      "Minimum n to split at node",
+  #    "Minimum n to split at node",
       "Tree depth", 
       "Learning rate"))
 
