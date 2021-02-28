@@ -228,16 +228,42 @@ final_boost_wf %>%
 ```
 
 ```{r}
+library(tidyverse)
+library(tidymodels)
+library(rcfss)
+data("gss", package = "rcfss")
+# splitting data
+set.seed(123)
+gss_split <- initial_split(gss, strata = colrac)
+
+gss_train <- training(gss_split)
+gss_test <- testing(gss_split)
+
+folds <- vfold_cv(gss_train, v = 10)
+#set up of log model
+lr_mod <- logistic_reg() %>% 
+  set_engine("glm")
+
+colrac_lr_wf <- workflow() %>%
+  add_model(lr_mod) %>%
+  add_formula(colrac ~ 
+                age + black + degree + partyid_3 + sex + south)
+
+lr_fit_rs <- colrac_lr_wf %>%
+  fit_resamples(folds)
+
+# writing function
 find_accuracy <- function(df, modeltype) {
   df %>%
   collect_metrics %>%
     filter(.metric == "accuracy") %>%
     select(c(-n, -.estimator, -std_err, -.config)) %>%
-    add_column(type = {modeltype})
+    add_column(type = {"modeltype"}) # PROBLEM ARISES HERE
 }
 
-find_accuracy(ridge_rs, modeltype = ridge) #%>%
-  add_column(type = "ridge")
+# testing func
+find_accuracy(lr_fit_rs) #%>%
+  add_column(type = "logistic")
 
 comb_ridge %>% ridge_rs %>%
   collect_metrics() %>%
