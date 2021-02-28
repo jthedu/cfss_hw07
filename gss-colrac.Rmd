@@ -54,8 +54,8 @@ colrac_lr_wf <- workflow() %>%
 lr_fit_rs <- colrac_lr_wf %>%
   fit_resamples(folds)
 
-collect_metrics(lr_fit_rs) %>%
-  # can use summarize = FALSE to see metrics for all 10 folds
+lr_fit_rs %>%
+  collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
 Accuracy pretty dang low, man!
@@ -83,8 +83,10 @@ rf_wf <- workflow() %>%
   add_model(rf_mod) %>%
   add_recipe(rf_rec)
 
-rf_wf %>%
-  fit_resamples(folds) %>%
+rf_rs <- rf_wf %>%
+  fit_resamples(folds) 
+
+rf_rs %>%
   collect_metrics() %>% 
   filter(.metric == "accuracy")
 ```
@@ -113,8 +115,10 @@ knn_wf <- workflow() %>%
   add_model(knn_mod) %>%
   add_recipe(knn_rec)
 
-knn_wf %>%
-  fit_resamples(folds) %>%
+knn_rs <- knn_wf %>%
+  fit_resamples(folds) 
+
+knn_rs %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
@@ -126,8 +130,10 @@ ridge_mod <- logistic_reg(penalty = .01, mixture = 0) %>%
   set_mode("classification")
 
 # using same recipe as knn
-update_model(knn_wf, ridge_mod) %>%
-  fit_resamples(folds) %>%
+ridge_rs <- update_model(knn_wf, ridge_mod) %>%
+  fit_resamples(folds) 
+
+ridge_rs %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
@@ -146,9 +152,6 @@ boost_grid <- grid_regular(min_n(),
                           learn_rate(),
                           levels = 3)
 
-#tree_grid %>% 
- # count(tree_depth)
-
 boost_wf <- workflow() %>%
   add_model(boost_tune_spec) %>%
   add_recipe(knn_rec)
@@ -162,13 +165,38 @@ boost_res <- boost_wf %>%
 boost_res %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
+
+boost_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  mutate(tree_depth = factor(tree_depth)) %>%
+  ggplot(aes(learn_rate, mean, color = tree_depth)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ min_n, labeller = label_both) +
+  scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
+#  scale_x_continuous(breaks=c(0, 0.05, 0.1)) +
+  scale_x_log10(labels = scales::label_number()) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "Accuracy across different hyperparameter values",
+       x = "log10(Learn rate)",
+       y = "Mean accuracy",
+       color = "Tree depth")
 ```
 
 ```{r boost_best}
 # then choose the best model to finish tuning
 best_boost <- boost_res %>%
   select_best("accuracy")
-# can make this a nice kable
+
+best_boost %>%
+  select(-.config) %>%
+  knitr::kable(
+    caption = "Hyperparameter values maximizing accuracy in boosted tree model", 
+    col.names = c(
+      "Minimum n to split at node",
+      "Tree depth", 
+      "Learning rate"))
 
 final_boost_wf <- boost_wf %>%
   finalize_workflow(best_boost)
@@ -197,6 +225,29 @@ final_boost_wf %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
 
+```
+
+```{r}
+find_accuracy <- function(df, modeltype) {
+  df %>%
+  collect_metrics %>%
+    filter(.metric == "accuracy") %>%
+    select(c(-n, -.estimator, -std_err, -.config)) %>%
+    add_column(type = {modeltype})
+}
+
+find_accuracy(ridge_rs, modeltype = ridge) #%>%
+  add_column(type = "ridge")
+
+comb_ridge %>% ridge_rs %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+
+
+bind_rows(knn_res, lr_res, ridge_rs) 
+
+knn_res
+  
 ```
 
 ## Session info
