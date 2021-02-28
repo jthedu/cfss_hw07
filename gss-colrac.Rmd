@@ -207,66 +207,54 @@ final_boost <- final_boost_wf %>%
   fit(data = gss_train)
 
 # can see how important each var is here
-final_tree %>% 
+final_boost %>% 
   pull_workflow_fit() %>% 
   vip() +
   labs(title = "Important variables\nin final boosted tree model") 
 
 # last fit & eval of model performance
-final_boost_wf %>%
-  last_fit(gss_split) %>%
+final_fit <- final_boost_wf %>%
+  last_fit(gss_split) 
+
+final_fit %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
-
 ```
 
 ```{r}
-library(tidyverse)
-library(tidymodels)
-library(rcfss)
-data("gss", package = "rcfss")
-# splitting data
-set.seed(123)
-gss_split <- initial_split(gss, strata = colrac)
-
-gss_train <- training(gss_split)
-gss_test <- testing(gss_split)
-
-folds <- vfold_cv(gss_train, v = 10)
-#set up of log model
-lr_mod <- logistic_reg() %>% 
-  set_engine("glm")
-
-colrac_lr_wf <- workflow() %>%
-  add_model(lr_mod) %>%
-  add_formula(colrac ~ 
-                age + black + degree + partyid_3 + sex + south)
-
-lr_fit_rs <- colrac_lr_wf %>%
-  fit_resamples(folds)
-
 # writing function
 find_accuracy <- function(df, modeltype) {
   df %>%
   collect_metrics %>%
     filter(.metric == "accuracy") %>%
-    select(c(-n, -.estimator, -std_err, -.config)) %>%
-    add_column(type = {"modeltype"}) # PROBLEM ARISES HERE
+    add_column(type = modeltype) %>%
+    select(c(type, mean)) 
 }
 
-# testing func
-find_accuracy(lr_fit_rs) #%>%
-  add_column(type = "logistic")
-
-comb_ridge %>% ridge_rs %>%
+# any way to iterate this? pmap?
+compare_accuracy <- final_fit %>%
   collect_metrics() %>%
   filter(.metric == "accuracy") %>%
+  rename(mean = .estimate) %>%
+  add_column(type = "boosted tree") %>%
+  select(c(type, mean)) %>%
+  bind_rows(
+    find_accuracy(lr_fit_rs, "logistic"),
+    find_accuracy(rf_rs, "random forest"), 
+    find_accuracy(knn_rs, "knn"), 
+    find_accuracy(ridge_rs, "ridge")
+    ) %>%
+  arrange(desc(mean)) 
 
-
-bind_rows(knn_res, lr_res, ridge_rs) 
-
-knn_res
-  
+compare_accuracy %>%
+  mutate(mean = mean * 100) %>%
+  knitr::kable(
+    caption = "Accuracy across models", 
+    col.names = c(
+      "Model type",
+      "Percentage of data predicted correctly"), 
+    digits = 2)
+    
 ```
 so it seems that random_forest gave best model. predicted about 79% of data correctly. logistic gave worst (53% accuracy()), probably cuz it didn't use all var in dataset as predictor var (so less of the variation could've been explained).
 for models that included all available vars as predictors, knn did worst. 
