@@ -7,10 +7,9 @@ output:
     toc: true
 ---
 
-#do this later
-{r setup, echo = FALSE}
-#knitr::opts_chunk$set(message = FALSE)
-
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(message = FALSE)
+```
 
 ## Load necessary libraries
 
@@ -18,8 +17,6 @@ output:
 library(tidyverse)
 library(tidymodels)
 library(rcfss)
-library(yardstick)
-library(skimr)
 library(vip)
 library(lubridate)
 
@@ -28,13 +25,7 @@ set.seed(123)
 theme_set(theme_minimal())
 ```
 
-ASK WHY fit_resample
-also what are "appropriate visualization techniques" for these models
-auc, accuracy over tuning, confusion matrix
-check distributions of vars w/ ggplot syntax
-skimr - package (skimr(df))
-
-
+## Basic linear model
 ```{r basic_line}
 lm_mod <- linear_reg() %>% 
   set_engine("lm")
@@ -50,18 +41,16 @@ debt_wflow <- workflow() %>%
 debt_fit <- debt_wflow %>%
   fit(data = scorecard)
 
-#debt_fit %>%
- # pull_workflow_fit() %>%
-  #tidy()
-
 predict(object = debt_fit, new_data = scorecard) %>%
   mutate(actual_debt = scorecard$debt) %>%
   rmse(truth = actual_debt, estimate = .pred)
 ```
-Note: for this basic linear model, I could've just altered the dataframe directly to drop my desired variables and used a workflow of model + formula, rather than model + recipe. I chose to do the latter because the recipe approach seemed more intuitive and neater to me. 
 
+Note: for this basic linear model, I could've just altered the dataframe directly to drop my desired variables and used a workflow of model + formula, rather than model + recipe. I chose to do the latter because the recipe approach was more intuitive and neater to me. 
+
+## Cross-validated linear model
 ```{r line_CV}
-# adding folds in - ISSUE STARTS HERE 
+# adding folds in 
 folds_score <- vfold_cv(scorecard, v = 10)
 
 lm_fit_rs <- debt_wflow %>% 
@@ -72,17 +61,8 @@ lm_fit_rs %>%
   filter(.metric == "rmse")
 ```
 
-
+## Tuned decision tree
 ```{r decision_tree, cache = TRUE}
-#tree_mod <- decision_tree() %>% 
- # set_engine("rpart") %>%
-  #set_mode("regression")
-
-# having issues here
-#update_model(debt_wflow, tree_mod) %>%
- # fit_resamples(folds) %>%
-  #collect_metrics() 
-
 # gonna try a tuned model
 score_split <- initial_split(scorecard)
 
@@ -101,9 +81,6 @@ tree_grid <- grid_regular(cost_complexity(),
                           tree_depth(),
                           levels = 5)
 
-#tree_grid %>% 
- # count(tree_depth)
-
 tree_folds <- vfold_cv(score_train)
 
 tree_wf <- workflow() %>%
@@ -121,10 +98,9 @@ tree_res %>%
   collect_metrics() %>%
   filter(.metric == "rmse")
 
-#check this works
+# graph diff values of hyperparameters
 tree_res %>%
   collect_metrics() %>%
- # filter(.metric == "rmse") %>%
   mutate(tree_depth = factor(tree_depth)) %>%
   ggplot(aes(cost_complexity, mean, color = tree_depth)) +
   geom_line(size = 1.5, alpha = 0.6) +
@@ -132,13 +108,13 @@ tree_res %>%
   facet_wrap(~ .metric, scales = "free") +
   scale_color_viridis_d(option = "plasma", begin = .9, end = 0) +
   scale_x_log10(labels = scales::label_number()) +
- # theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "RMSE & R^2 across different hyperparameter values",
        x = "log10(Cost complexity)",
-       y = "Mean values of models",
+       y = "Mean values of decision tree models",
        color = "Tree depth")
 ```
-looks like model w/ tree depth of 4 & log10(cost complexity) very close to 0 is best -- has the smallest RMSE (i.e. smallest diffs between observed values & predicted values of debt by the model) & highest R^2 (i.e. more of the variance in debt is explained by the model). in short, fit is best for those parameters
+
+It looks like the decision tree model with a tree depth of 4 and a log10(cost complexity) extremely close to 0 was the best. This model has the smallest RMSE (i.e. it has the smallest differences between observed values and model-predicted values of debt) and the highest R^2 (i.e. more of the variance in debt is explained by the model). In short, the model fit is best for those parameter values.
 
 
 ```{r tree_best}
@@ -174,10 +150,13 @@ final_tree_wf %>%
   filter(.metric == "rmse")
 ```
 
+The importance graph shows which variables are most important in driving predictions on student loan debt for this model - it definitely makes sense that cost and netcost would be crucial, though I didn't expect completion rate of 1st-time, full-time students to be so important as well.
 
-so, overall, saw smallest RMSE for basic linear model. w/ cross-validation, saw slightly bigger RMSE & w/ tuned decision tree, saw even bigger. 
+## Conclusion
 
-makes sense -- w/o resampling & tuning, models can be unrealistically optimistic & seem to explain data very well
+Overall, we saw the smallest RMSE for the basic linear model (2992.32). When we add in cross-validation to the linear model, we see a slightly bigger RMSE (3029.57). With the tuned decision tree, we see an even bigger RMSE (3512.67). This seems to make sense. Without resampling or tuning, a model can be unrealistically optimistic and seem to explain data very well - when really the model was overfitting the data we have. 
+
+It is interesting that the tuned decision tree did worse than the cross-validated linear model, so this may be an instance where a decision tree model just doesn't work as well as a linear model. Overall, I'd say that the cross-validated linear model did the best overall, given its comparatively low RMSE.
 
 ## Session info
 

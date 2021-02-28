@@ -7,6 +7,10 @@ output:
     toc: true
 ---
 
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, cache = TRUE)
+```
+
 ## Load necessary libraries
 
 ```{r packages}
@@ -39,7 +43,7 @@ gss_test <- testing(gss_split)
 folds <- vfold_cv(gss_train, v = 10)
 ```
 
-CHECK THAT I DON'T NEED TO PRE-PROCESS this logistic model
+## Logistic regression
 ```{r log_reg}
 # build a log model specification
 lr_mod <- logistic_reg() %>% 
@@ -58,8 +62,8 @@ lr_fit_rs %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
-Accuracy pretty dang low, man!
 
+## Random forest
 ```{r random_forest}
 # random forest template  
 # doesn't actually do anything, but good for reference
@@ -69,8 +73,6 @@ Accuracy pretty dang low, man!
 rf_mod <- rand_forest(trees = 1000) %>% 
   set_engine("ranger") %>% 
   set_mode("classification")
-
-## do i need TREES IN MY MODEL?
 
 rf_rec <- recipe(colrac ~ ., data = gss_train) %>% 
   update_role(id, wtss, new_role = "ID") %>%
@@ -91,7 +93,7 @@ rf_rs %>%
   filter(.metric == "accuracy")
 ```
 
-
+## 5-nearest neighbors
 ```{r knn}
 # template for kknn
 #use_kknn(colrac ~ ., data = gss_train, verbose = TRUE, tune = FALSE)
@@ -123,7 +125,7 @@ knn_rs %>%
   filter(.metric == "accuracy")
 ```
 
-
+## Ridge logistic regression
 ```{r ridge}
 ridge_mod <- logistic_reg(penalty = .01, mixture = 0) %>% 
   set_engine("glmnet") %>% # use glmnet over glm since we have a penalty
@@ -137,6 +139,8 @@ ridge_rs %>%
   collect_metrics() %>%
   filter(.metric == "accuracy")
 ```
+
+## Tuned boosted tree
 ```{r tune_boost_tree, cache = TRUE}
 boost_tune_spec <- 
   boost_tree(
@@ -182,7 +186,8 @@ boost_res %>%
        y = "Mean accuracy",
        color = "Tree depth")
 ```
-can see that highest accuracy comes from min_n of 2. looking closer, see that tree depth of 8 & log10(learn rate) of around .00001 gave best
+
+From the graph, we can see that highest accuracy comes from a min_n value of 2. Looking closer, we see that a tree depth of 8 & log10(learn rate) of around .00001 gave the best accuracy of all tested boosted tree models.
 
 
 ```{r boost_best}
@@ -221,7 +226,11 @@ final_fit %>%
   filter(.metric == "accuracy")
 ```
 
-```{r}
+The importance graph shows which variables are most important in driving predictions on the racist college professors question for this model - tolerance seems especially important, which seems logical.
+
+
+## Comparing models
+```{r compare_models}
 # writing function
 find_accuracy <- function(df, modeltype) {
   df %>%
@@ -231,7 +240,7 @@ find_accuracy <- function(df, modeltype) {
     select(c(type, mean)) 
 }
 
-# any way to iterate this? pmap?
+# assembling table of all accuracy figures
 compare_accuracy <- final_fit %>%
   collect_metrics() %>%
   filter(.metric == "accuracy") %>%
@@ -242,7 +251,7 @@ compare_accuracy <- final_fit %>%
     find_accuracy(lr_fit_rs, "logistic"),
     find_accuracy(rf_rs, "random forest"), 
     find_accuracy(knn_rs, "knn"), 
-    find_accuracy(ridge_rs, "ridge")
+    find_accuracy(ridge_rs, "ridge logistic")
     ) %>%
   arrange(desc(mean)) 
 
@@ -254,11 +263,13 @@ compare_accuracy %>%
       "Model type",
       "Percentage of data predicted correctly"), 
     digits = 2)
-    
 ```
-so it seems that random_forest gave best model. predicted about 79% of data correctly. logistic gave worst (53% accuracy()), probably cuz it didn't use all var in dataset as predictor var (so less of the variation could've been explained).
-for models that included all available vars as predictors, knn did worst. 
-even tuning didn't help boosted tree model do better than random forest (tuned boosted tree got 75% right) or even ridge model, indicating that there's a limit to how far tuning will get you if your model overall doesn't work that well. 
+
+Random forest gave the most accurate model, predicted about 79% of data correctly. The logistic regression was the worst (53% accuracy), probably because it, unlike all other models built here, didn't use all variables in the dataset as predictor variables. The logistic regression only used the age, black, degree, partyid_3, sex, and south variables as predictors - so less of the variation in the outcome variable would've been explained.
+
+Of the models that did include all available variables as predictors, the 5-nearest neighbors did the worst, with an accuracy of 61%.
+
+Interestingly, tuning didn't help the boosted tree model do better than random forest (tuned boosted tree had a mean accuracy of 76%) or even better than the ridge model (accuracy of 78%), indicating that there's a limit to how far tuning can get you if your model overall doesn't work that well or isn't best suited for the question at hand.
 
 
 ## Session info
